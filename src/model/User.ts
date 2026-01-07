@@ -1,0 +1,15 @@
+import {RowDataPacket} from "mysql2";
+
+// Für neue User (Input)
+export interface IUser {
+    username: string;
+    password: string;
+}
+
+// Für DB-Abfragen (Output)
+export interface IUserData extends RowDataPacket {
+    id: number;
+    username: string;
+    password: string;
+    created_at: Date;
+}
