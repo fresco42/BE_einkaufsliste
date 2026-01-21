@@ -1,7 +1,3 @@
--- Datenbank erstellen
-CREATE DATABASE IF NOT EXISTS shopping_list;
-USE shopping_list;
-
 -- Users Tabelle
 CREATE TABLE IF NOT EXISTS users (
     id INT PRIMARY KEY AUTO_INCREMENT,

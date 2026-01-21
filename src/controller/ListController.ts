@@ -2,23 +2,156 @@ import {Express, Request, Response} from "express";
 import {DB} from "../db";
 import {IList, IListData, IUpdateList} from "../model/List";
 import {ResultSetHeader} from "mysql2";
+import {validateAuth} from "../middleware/auth";
 
 export class ListController {
     static init(app: Express) {
-        // Create new list
-        app.post("/lists", this.createList);
+        /**
+         * @swagger
+         * /lists:
+         *   post:
+         *     summary: Neue Liste erstellen
+         *     tags: [Lists]
+         *     security:
+         *       - bearerAuth: []
+         *     requestBody:
+         *       required: true
+         *       content:
+         *         application/json:
+         *           schema:
+         *             $ref: '#/components/schemas/ListInput'
+         *     responses:
+         *       201:
+         *         description: Liste erfolgreich erstellt
+         *       400:
+         *         description: Name und user_id erforderlich
+         *       401:
+         *         description: Nicht autorisiert
+         *       500:
+         *         description: Server Error
+         */
+        app.post("/lists", validateAuth, this.createList);
 
-        // Get all lists for a user
+        /**
+         * @swagger
+         * /lists/user/{userId}:
+         *   get:
+         *     summary: Alle Listen eines Users abrufen
+         *     tags: [Lists]
+         *     parameters:
+         *       - in: path
+         *         name: userId
+         *         required: true
+         *         schema:
+         *           type: integer
+         *         description: User ID
+         *     responses:
+         *       200:
+         *         description: Listen des Users
+         *         content:
+         *           application/json:
+         *             schema:
+         *               type: array
+         *               items:
+         *                 $ref: '#/components/schemas/List'
+         *       500:
+         *         description: Server Error
+         */
         app.get("/lists/user/:userId", this.getListsByUserId);
 
-        // Get list by ID
+        /**
+         * @swagger
+         * /lists/{id}:
+         *   get:
+         *     summary: Liste by ID abrufen
+         *     tags: [Lists]
+         *     parameters:
+         *       - in: path
+         *         name: id
+         *         required: true
+         *         schema:
+         *           type: integer
+         *         description: Liste ID
+         *     responses:
+         *       200:
+         *         description: Liste gefunden
+         *         content:
+         *           application/json:
+         *             schema:
+         *               $ref: '#/components/schemas/List'
+         *       404:
+         *         description: Liste nicht gefunden
+         *       500:
+         *         description: Server Error
+         */
         app.get("/lists/:id", this.getListById);
 
-        // Update list (rename)
-        app.put("/lists/:id", this.updateList);
+        /**
+         * @swagger
+         * /lists/{id}:
+         *   put:
+         *     summary: Liste umbenennen
+         *     tags: [Lists]
+         *     security:
+         *       - bearerAuth: []
+         *     parameters:
+         *       - in: path
+         *         name: id
+         *         required: true
+         *         schema:
+         *           type: integer
+         *         description: Liste ID
+         *     requestBody:
+         *       required: true
+         *       content:
+         *         application/json:
+         *           schema:
+         *             type: object
+         *             required: [name]
+         *             properties:
+         *               name:
+         *                 type: string
+         *                 example: Neuer Listenname
+         *     responses:
+         *       200:
+         *         description: Liste erfolgreich aktualisiert
+         *       400:
+         *         description: Name erforderlich
+         *       401:
+         *         description: Nicht autorisiert
+         *       404:
+         *         description: Liste nicht gefunden
+         *       500:
+         *         description: Server Error
+         */
+        app.put("/lists/:id", validateAuth, this.updateList);
 
-        // Delete list
-        app.delete("/lists/:id", this.deleteList);
+        /**
+         * @swagger
+         * /lists/{id}:
+         *   delete:
+         *     summary: Liste löschen
+         *     tags: [Lists]
+         *     security:
+         *       - bearerAuth: []
+         *     parameters:
+         *       - in: path
+         *         name: id
+         *         required: true
+         *         schema:
+         *           type: integer
+         *         description: Liste ID
+         *     responses:
+         *       200:
+         *         description: Liste erfolgreich gelöscht
+         *       401:
+         *         description: Nicht autorisiert
+         *       404:
+         *         description: Liste nicht gefunden
+         *       500:
+         *         description: Server Error
+         */
+        app.delete("/lists/:id", validateAuth, this.deleteList);
     }
 
     private static async createList(req: Request, res: Response) {

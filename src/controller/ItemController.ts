@@ -2,23 +2,151 @@ import {Express, Request, Response} from "express";
 import {DB} from "../db";
 import {IItem, IItemData, IUpdateItem} from "../model/Item";
 import {ResultSetHeader} from "mysql2";
+import {validateAuth} from "../middleware/auth";
 
 export class ItemController {
     static init(app: Express) {
-        // Create new item
-        app.post("/items", this.createItem);
+        /**
+         * @swagger
+         * /items:
+         *   post:
+         *     summary: Neues Item erstellen
+         *     tags: [Items]
+         *     security:
+         *       - bearerAuth: []
+         *     requestBody:
+         *       required: true
+         *       content:
+         *         application/json:
+         *           schema:
+         *             $ref: '#/components/schemas/ItemInput'
+         *     responses:
+         *       201:
+         *         description: Item erfolgreich erstellt
+         *       400:
+         *         description: Name und list_id erforderlich
+         *       401:
+         *         description: Nicht autorisiert
+         *       500:
+         *         description: Server Error
+         */
+        app.post("/items", validateAuth, this.createItem);
 
-        // Get all items for a list
+        /**
+         * @swagger
+         * /items/list/{listId}:
+         *   get:
+         *     summary: Alle Items einer Liste abrufen
+         *     tags: [Items]
+         *     parameters:
+         *       - in: path
+         *         name: listId
+         *         required: true
+         *         schema:
+         *           type: integer
+         *         description: Liste ID
+         *     responses:
+         *       200:
+         *         description: Items der Liste
+         *         content:
+         *           application/json:
+         *             schema:
+         *               type: array
+         *               items:
+         *                 $ref: '#/components/schemas/Item'
+         *       500:
+         *         description: Server Error
+         */
         app.get("/items/list/:listId", this.getItemsByListId);
 
-        // Get item by ID
+        /**
+         * @swagger
+         * /items/{id}:
+         *   get:
+         *     summary: Item by ID abrufen
+         *     tags: [Items]
+         *     parameters:
+         *       - in: path
+         *         name: id
+         *         required: true
+         *         schema:
+         *           type: integer
+         *         description: Item ID
+         *     responses:
+         *       200:
+         *         description: Item gefunden
+         *         content:
+         *           application/json:
+         *             schema:
+         *               $ref: '#/components/schemas/Item'
+         *       404:
+         *         description: Item nicht gefunden
+         *       500:
+         *         description: Server Error
+         */
         app.get("/items/:id", this.getItemById);
 
-        // Update item (name, quantity, checked status)
-        app.put("/items/:id", this.updateItem);
+        /**
+         * @swagger
+         * /items/{id}:
+         *   put:
+         *     summary: Item aktualisieren
+         *     tags: [Items]
+         *     security:
+         *       - bearerAuth: []
+         *     parameters:
+         *       - in: path
+         *         name: id
+         *         required: true
+         *         schema:
+         *           type: integer
+         *         description: Item ID
+         *     requestBody:
+         *       required: true
+         *       content:
+         *         application/json:
+         *           schema:
+         *             $ref: '#/components/schemas/ItemUpdate'
+         *     responses:
+         *       200:
+         *         description: Item erfolgreich aktualisiert
+         *       400:
+         *         description: Keine Felder zum Aktualisieren
+         *       401:
+         *         description: Nicht autorisiert
+         *       404:
+         *         description: Item nicht gefunden
+         *       500:
+         *         description: Server Error
+         */
+        app.put("/items/:id", validateAuth, this.updateItem);
 
-        // Delete item
-        app.delete("/items/:id", this.deleteItem);
+        /**
+         * @swagger
+         * /items/{id}:
+         *   delete:
+         *     summary: Item löschen
+         *     tags: [Items]
+         *     security:
+         *       - bearerAuth: []
+         *     parameters:
+         *       - in: path
+         *         name: id
+         *         required: true
+         *         schema:
+         *           type: integer
+         *         description: Item ID
+         *     responses:
+         *       200:
+         *         description: Item erfolgreich gelöscht
+         *       401:
+         *         description: Nicht autorisiert
+         *       404:
+         *         description: Item nicht gefunden
+         *       500:
+         *         description: Server Error
+         */
+        app.delete("/items/:id", validateAuth, this.deleteItem);
     }
 
     private static async createItem(req: Request, res: Response) {
@@ -91,7 +219,7 @@ export class ItemController {
             const updateData: IUpdateItem = req.body;
 
             const updates: string[] = [];
-            const values: any[] = [];
+            const values: (string | number | boolean)[] = [];
 
             if (updateData.name !== undefined) {
                 updates.push("name = ?");

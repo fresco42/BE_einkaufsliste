@@ -3,6 +3,8 @@ loadEnvFile();
 
 import express from "express";
 import cors from "cors";
+import swaggerUi from "swagger-ui-express";
+import {swaggerSpec} from "./swagger";
 import {UserController} from "./controller/UserController";
 import {ListController} from "./controller/ListController";
 import {ItemController} from "./controller/ItemController";
@@ -11,6 +13,9 @@ const app = express();
 
 app.use(express.json());
 app.use(cors());
+
+// Swagger UI
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Root Route - API Info
 app.get("/", (req, res) => {

@@ -2,3 +2,5 @@ node_modules/
 dist/
 .env
 .idea/
+CLAUDE.md
+README.md

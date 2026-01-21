@@ -2,22 +2,127 @@ import {Express, Request, Response} from "express";
 import {DB} from "../db";
 import {IUser, IUserData} from "../model/User";
 import {ResultSetHeader} from "mysql2";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 export class UserController {
     static init(app: Express) {
-        // Create new user (Register)
+        /**
+         * @swagger
+         * /users:
+         *   post:
+         *     summary: Neuen User registrieren
+         *     tags: [Users]
+         *     requestBody:
+         *       required: true
+         *       content:
+         *         application/json:
+         *           schema:
+         *             $ref: '#/components/schemas/UserInput'
+         *     responses:
+         *       201:
+         *         description: User erfolgreich erstellt
+         *       400:
+         *         description: Username und Passwort erforderlich
+         *       409:
+         *         description: Username existiert bereits
+         *       500:
+         *         description: Server Error
+         */
         app.post("/users", this.createUser);
 
-        // Login user
+        /**
+         * @swagger
+         * /users/login:
+         *   post:
+         *     summary: User einloggen
+         *     tags: [Users]
+         *     requestBody:
+         *       required: true
+         *       content:
+         *         application/json:
+         *           schema:
+         *             $ref: '#/components/schemas/UserInput'
+         *     responses:
+         *       200:
+         *         description: Login erfolgreich, gibt User-Daten und JWT Token zurück
+         *       400:
+         *         description: Username und Passwort erforderlich
+         *       401:
+         *         description: Ungültige Anmeldedaten
+         *       500:
+         *         description: Server Error
+         */
         app.post("/users/login", this.loginUser);
 
-        // Get user by ID
+        /**
+         * @swagger
+         * /users/{id}:
+         *   get:
+         *     summary: User by ID abrufen
+         *     tags: [Users]
+         *     parameters:
+         *       - in: path
+         *         name: id
+         *         required: true
+         *         schema:
+         *           type: integer
+         *         description: User ID
+         *     responses:
+         *       200:
+         *         description: User gefunden
+         *         content:
+         *           application/json:
+         *             schema:
+         *               $ref: '#/components/schemas/User'
+         *       404:
+         *         description: User nicht gefunden
+         *       500:
+         *         description: Server Error
+         */
         app.get("/users/:id", this.getUserById);
 
-        // Get all users
+        /**
+         * @swagger
+         * /users:
+         *   get:
+         *     summary: Alle User abrufen
+         *     tags: [Users]
+         *     responses:
+         *       200:
+         *         description: Liste aller User
+         *         content:
+         *           application/json:
+         *             schema:
+         *               type: array
+         *               items:
+         *                 $ref: '#/components/schemas/User'
+         *       500:
+         *         description: Server Error
+         */
         app.get("/users", this.getAllUsers);
 
-        // Delete user
+        /**
+         * @swagger
+         * /users/{id}:
+         *   delete:
+         *     summary: User löschen
+         *     tags: [Users]
+         *     parameters:
+         *       - in: path
+         *         name: id
+         *         required: true
+         *         schema:
+         *           type: integer
+         *         description: User ID
+         *     responses:
+         *       200:
+         *         description: User erfolgreich gelöscht
+         *       404:
+         *         description: User nicht gefunden
+         *       500:
+         *         description: Server Error
+         */
         app.delete("/users/:id", this.deleteUser);
     }
 
@@ -26,12 +131,15 @@ export class UserController {
             const user: IUser = req.body;
 
             if (!user.username || !user.password) {
-                return res.status(400).json({error: "Username and password are required"});
+                res.status(400).json({error: "Username and password are required"});
+                return;
             }
+
+            const hashedPassword = await bcrypt.hash(user.password, 10);
 
             const [result] = await DB.query<ResultSetHeader>(
                 "INSERT INTO users (username, password) VALUES (?, ?)",
-                [user.username, user.password]
+                [user.username, hashedPassword]
             );
 
             res.status(201).json({
@@ -39,8 +147,8 @@ export class UserController {
                 username: user.username,
                 message: "User created successfully"
             });
-        } catch (error: any) {
-            if (error.code === 'ER_DUP_ENTRY') {
+        } catch (error: unknown) {
+            if (error instanceof Error && 'code' in error && error.code === 'ER_DUP_ENTRY') {
                 res.status(409).json({error: "Username already exists"});
             } else {
                 res.status(500).json({error: "Failed to create user"});
@@ -53,23 +161,41 @@ export class UserController {
             const {username, password}: IUser = req.body;
 
             if (!username || !password) {
-                return res.status(400).json({error: "Username and password are required"});
+                res.status(400).json({error: "Username and password are required"});
+                return;
             }
 
             const [users] = await DB.query<IUserData[]>(
-                "SELECT * FROM users WHERE username = ? AND password = ?",
-                [username, password]
+                "SELECT * FROM users WHERE username = ?",
+                [username]
             );
 
             if (users.length === 0) {
-                return res.status(401).json({error: "Invalid credentials"});
+                res.status(401).json({error: "Invalid credentials"});
+                return;
             }
 
             const user = users[0];
+            const passwordMatch = await bcrypt.compare(password, user.password);
+
+            if (!passwordMatch) {
+                res.status(401).json({error: "Invalid credentials"});
+                return;
+            }
+
+            const secret = process.env.JWT_SECRET;
+            if (!secret) {
+                res.status(500).json({error: "JWT secret not configured"});
+                return;
+            }
+
+            const token = jwt.sign({userId: user.id}, secret, {expiresIn: "24h"});
+
             res.json({
                 id: user.id,
                 username: user.username,
-                created_at: user.created_at
+                created_at: user.created_at,
+                token
             });
         } catch (error) {
             res.status(500).json({error: "Login failed"});
