@@ -1,35 +1,26 @@
-import {Request, Response, NextFunction} from "express";
-import jwt from "jsonwebtoken";
+import jwt from 'jsonwebtoken';
+import {NextFunction,Request, Response} from "express";
 
-export interface AuthRequest extends Request {
-    userId?: number;
+interface ITokenPayload {
+    username: string;
 }
 
-export interface JwtPayload {
-    userId: number;
+export function generateToken(payload: ITokenPayload){
+    return jwt.sign(payload, process.env.JWT_SECRET!)
 }
 
-export function validateAuth(req: AuthRequest, res: Response, next: NextFunction) {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        res.status(401).json({error: "No token provided"});
-        return;
-    }
-
-    const token = authHeader.substring(7);
-
-    try {
-        const secret = process.env.JWT_SECRET;
-        if (!secret) {
-            res.status(500).json({error: "JWT secret not configured"});
+export function validateAuth(req: Request, res: Response, next: NextFunction) {
+    try{
+        const header = (req.headers.authorization ?? '').trim();
+        if(!header.startsWith('Bearer ')){
+            res.status(401).send('Not authorized');
             return;
         }
-
-        const decoded = jwt.verify(token, secret) as JwtPayload;
-        req.userId = decoded.userId;
+        const token = header.substring('Bearer '.length).trim();
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as ITokenPayload;
+        req.params._username = decoded.username;
         next();
-    } catch (error) {
-        res.status(401).json({error: "Invalid token"});
+    } catch{
+        res.status(401).send('Not authorized');
     }
 }
