@@ -1,8 +1,7 @@
 import {Express, Request, Response} from "express";
-import {DB} from "../db";
-import {IItem, IItemData, IUpdateItem} from "../model/Item";
-import {ResultSetHeader} from "mysql2";
-import {validateAuth} from "../middleware/auth";
+import {IItem, IUpdateItem} from "../model/Item";
+import {ItemService} from "../service/ItemService";
+import {validateAuth} from "../auth";
 
 export class ItemController {
     static init(app: Express) {
@@ -14,129 +13,90 @@ export class ItemController {
     }
 
     private static async createItem(req: Request, res: Response) {
-        try {
-            const item: IItem = req.body;
+        const item: IItem = req.body;
 
-            if (!item.name || !item.list_id) {
-                return res.status(400).json({error: "Name and list_id are required"});
-            }
+        if (!item.name || !item.list_id) {
+            res.status(400).json({error: "Name and list_id are required"});
+            return;
+        }
 
-            if (item.quantity === undefined || item.quantity === null) {
-                item.quantity = 1;
-            }
+        const result = await ItemService.create(item);
 
-            const [result] = await DB.query<ResultSetHeader>(
-                "INSERT INTO items (name, quantity, list_id) VALUES (?, ?, ?)",
-                [item.name, item.quantity, item.list_id]
-            );
-
+        if (result.status === 'created') {
             res.status(201).json({
-                id: result.insertId,
+                id: result.id,
                 name: item.name,
-                quantity: item.quantity,
+                quantity: item.quantity ?? 1,
                 list_id: item.list_id,
                 checked: false,
                 message: "Item created successfully"
             });
-        } catch (error) {
-            res.status(500).json({error: "Failed to create item"});
+            return;
         }
+
+        res.status(500).json({error: "Failed to create item"});
     }
 
     private static async getItemsByListId(req: Request, res: Response) {
-        try {
-            const listId = parseInt(req.params.listId);
+        const listId = parseInt(req.params.listId);
 
-            const [items] = await DB.query<IItemData[]>(
-                "SELECT * FROM items WHERE list_id = ? ORDER BY created_at DESC",
-                [listId]
-            );
+        const items = await ItemService.getByListId(listId);
 
-            res.json(items);
-        } catch (error) {
-            res.status(500).json({error: "Failed to fetch items"});
-        }
+        res.json(items);
     }
 
     private static async getItemById(req: Request, res: Response) {
-        try {
-            const id = parseInt(req.params.id);
+        const id = parseInt(req.params.id);
 
-            const [items] = await DB.query<IItemData[]>(
-                "SELECT * FROM items WHERE id = ?",
-                [id]
-            );
+        const item = await ItemService.getById(id);
 
-            if (items.length === 0) {
-                return res.status(404).json({error: "Item not found"});
-            }
-
-            res.json(items[0]);
-        } catch (error) {
-            res.status(500).json({error: "Failed to fetch item"});
+        if (!item) {
+            res.status(404).json({error: "Item not found"});
+            return;
         }
+
+        res.json(item);
     }
 
     private static async updateItem(req: Request, res: Response) {
-        try {
-            const id = parseInt(req.params.id);
-            const updateData: IUpdateItem = req.body;
+        const id = parseInt(req.params.id);
+        const updateData: IUpdateItem = req.body;
 
-            const updates: string[] = [];
-            const values: (string | number | boolean)[] = [];
+        if (updateData.name === undefined && updateData.quantity === undefined && updateData.checked === undefined) {
+            res.status(400).json({error: "No fields to update"});
+            return;
+        }
 
-            if (updateData.name !== undefined) {
-                updates.push("name = ?");
-                values.push(updateData.name);
-            }
+        const result = await ItemService.update(id, updateData);
 
-            if (updateData.quantity !== undefined) {
-                updates.push("quantity = ?");
-                values.push(updateData.quantity);
-            }
-
-            if (updateData.checked !== undefined) {
-                updates.push("checked = ?");
-                values.push(updateData.checked);
-            }
-
-            if (updates.length === 0) {
-                return res.status(400).json({error: "No fields to update"});
-            }
-
-            values.push(id);
-
-            const [result] = await DB.query<ResultSetHeader>(
-                `UPDATE items SET ${updates.join(", ")} WHERE id = ?`,
-                values
-            );
-
-            if (result.affectedRows === 0) {
-                return res.status(404).json({error: "Item not found"});
-            }
-
-            res.json({message: "Item updated successfully"});
-        } catch (error) {
-            res.status(500).json({error: "Failed to update item"});
+        switch (result) {
+            case 'updated':
+                res.json({message: "Item updated successfully"});
+                return;
+            case 'notFound':
+                res.status(404).json({error: "Item not found"});
+                return;
+            case 'error':
+                res.status(500).json({error: "Failed to update item"});
+                return;
         }
     }
 
     private static async deleteItem(req: Request, res: Response) {
-        try {
-            const id = parseInt(req.params.id);
+        const id = parseInt(req.params.id);
 
-            const [result] = await DB.query<ResultSetHeader>(
-                "DELETE FROM items WHERE id = ?",
-                [id]
-            );
+        const result = await ItemService.delete(id);
 
-            if (result.affectedRows === 0) {
-                return res.status(404).json({error: "Item not found"});
-            }
-
-            res.json({message: "Item deleted successfully"});
-        } catch (error) {
-            res.status(500).json({error: "Failed to delete item"});
+        switch (result) {
+            case 'deleted':
+                res.json({message: "Item deleted successfully"});
+                return;
+            case 'notFound':
+                res.status(404).json({error: "Item not found"});
+                return;
+            case 'error':
+                res.status(500).json({error: "Failed to delete item"});
+                return;
         }
     }
 }

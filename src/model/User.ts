@@ -13,3 +13,13 @@ export interface IUserData extends RowDataPacket {
     password: string;
     created_at: Date;
 }
+
+export interface IUserLogin {
+    username: string;
+    password: string;
+}
+
+// Für Passwort-Abfragen (nur password Feld)
+export interface IUserPassword extends RowDataPacket {
+    password: string;
+}

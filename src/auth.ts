@@ -1,18 +1,18 @@
 import jwt from 'jsonwebtoken';
-import {NextFunction,Request, Response} from "express";
+import {NextFunction, Request, Response} from "express";
 
 interface ITokenPayload {
     username: string;
 }
 
-export function generateToken(payload: ITokenPayload){
-    return jwt.sign(payload, process.env.JWT_SECRET!)
+export function generateToken(payload: ITokenPayload) {
+    return jwt.sign(payload, process.env.JWT_SECRET!);
 }
 
 export function validateAuth(req: Request, res: Response, next: NextFunction) {
-    try{
+    try {
         const header = (req.headers.authorization ?? '').trim();
-        if(!header.startsWith('Bearer ')){
+        if (!header.startsWith('Bearer ')) {
             res.status(401).send('Not authorized');
             return;
         }
@@ -20,7 +20,7 @@ export function validateAuth(req: Request, res: Response, next: NextFunction) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET!) as ITokenPayload;
         req.params._username = decoded.username;
         next();
-    } catch{
+    } catch {
         res.status(401).send('Not authorized');
     }
 }
