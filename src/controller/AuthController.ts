@@ -5,7 +5,7 @@ import {generateToken} from "../auth";
 
 export class AuthController {
     static init(app: Express) {
-        app.post('/login', AuthController.login);
+        app.post('/login/', AuthController.login);
     }
 
     private static async login(req: Request, res: Response) {
@@ -23,7 +23,21 @@ export class AuthController {
             return;
         }
 
-        const payload = {username: data.username};
-        res.json({token: generateToken(payload)});
+        // Hole User-Daten für userId im Token
+        const user = await UserService.getByUsername(data.username);
+        if (!user) {
+            res.status(500).json({error: 'User lookup failed'});
+            return;
+        }
+
+        const payload = {userId: user.id, username: data.username};
+        res.json({
+            token: generateToken(payload),
+            user: {
+                id: user.id,
+                username: user.username,
+                created_at: user.created_at
+            }
+        });
     }
 }

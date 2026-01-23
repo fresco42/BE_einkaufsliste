@@ -21,7 +21,7 @@ app.get("/", (req, res) => {
         endpoints: {
             users: {
                 "POST /users": "Register new user",
-                "POST /users/login": "Login user",
+                "POST /login/": "Login user",
                 "GET /users": "Get all users",
                 "GET /users/:id": "Get user by ID",
                 "DELETE /users/:id": "Delete user"

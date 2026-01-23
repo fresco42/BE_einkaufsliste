@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import {NextFunction, Request, Response} from "express";
 
 interface ITokenPayload {
+    userId: number;
     username: string;
 }
 
@@ -19,6 +20,7 @@ export function validateAuth(req: Request, res: Response, next: NextFunction) {
         const token = header.substring('Bearer '.length).trim();
         const decoded = jwt.verify(token, process.env.JWT_SECRET!) as ITokenPayload;
         req.params._username = decoded.username;
+        req.params._userId = String(decoded.userId);
         next();
     } catch {
         res.status(401).send('Not authorized');
