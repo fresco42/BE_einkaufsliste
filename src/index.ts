@@ -6,6 +6,7 @@ import cors from "cors";
 import {UserController} from "./controller/UserController";
 import {ListController} from "./controller/ListController";
 import {ItemController} from "./controller/ItemController";
+import {AuthController} from "./controller/AuthController";
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.get("/", (req, res) => {
 });
 
 // Controller initialisieren
+AuthController.init(app);
 UserController.init(app);
 ListController.init(app);
 ItemController.init(app);

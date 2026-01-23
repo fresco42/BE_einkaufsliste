@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /s \"D:\\\\3sem\\\\WF\\\\WF-UE7-Start\\\\src\")",
+      "Bash(findstr:*)"
+    ]
+  }
+}
