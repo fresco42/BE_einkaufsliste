@@ -1,13 +1,14 @@
 import {Express, Request, Response} from "express";
 import {IItem, IUpdateItem} from "../model/Item";
 import {ItemService} from "../service/ItemService";
-import {validateAuth} from "../auth";
+import {ListService} from "../service/ListService";
+import {getAuthUserId, validateAuth} from "../auth";
 
 export class ItemController {
     static init(app: Express) {
         app.post("/items", validateAuth, this.createItem);
-        app.get("/items/list/:listId", this.getItemsByListId);
-        app.get("/items/:id", this.getItemById);
+        app.get("/items/list/:listId", validateAuth, this.getItemsByListId);
+        app.get("/items/:id", validateAuth, this.getItemById);
         app.put("/items/:id", validateAuth, this.updateItem);
         app.delete("/items/:id", validateAuth, this.deleteItem);
     }
@@ -17,6 +18,16 @@ export class ItemController {
 
         if (!item.name || !item.list_id) {
             res.status(400).json({error: "Name and list_id are required"});
+            return;
+        }
+
+        const access = await ListService.checkOwner(item.list_id, getAuthUserId(res));
+        if (access === 'notFound') {
+            res.status(404).json({error: "List not found"});
+            return;
+        }
+        if (access === 'forbidden') {
+            res.status(403).json({error: "Forbidden"});
             return;
         }
 
@@ -40,6 +51,16 @@ export class ItemController {
     private static async getItemsByListId(req: Request, res: Response) {
         const listId = parseInt(req.params.listId);
 
+        const access = await ListService.checkOwner(listId, getAuthUserId(res));
+        if (access === 'notFound') {
+            res.status(404).json({error: "List not found"});
+            return;
+        }
+        if (access === 'forbidden') {
+            res.status(403).json({error: "Forbidden"});
+            return;
+        }
+
         const items = await ItemService.getByListId(listId);
 
         res.json(items);
@@ -47,6 +68,16 @@ export class ItemController {
 
     private static async getItemById(req: Request, res: Response) {
         const id = parseInt(req.params.id);
+
+        const access = await ItemService.checkOwner(id, getAuthUserId(res));
+        if (access === 'notFound') {
+            res.status(404).json({error: "Item not found"});
+            return;
+        }
+        if (access === 'forbidden') {
+            res.status(403).json({error: "Forbidden"});
+            return;
+        }
 
         const item = await ItemService.getById(id);
 
@@ -67,6 +98,16 @@ export class ItemController {
             return;
         }
 
+        const access = await ItemService.checkOwner(id, getAuthUserId(res));
+        if (access === 'notFound') {
+            res.status(404).json({error: "Item not found"});
+            return;
+        }
+        if (access === 'forbidden') {
+            res.status(403).json({error: "Forbidden"});
+            return;
+        }
+
         const result = await ItemService.update(id, updateData);
 
         switch (result) {
@@ -84,6 +125,16 @@ export class ItemController {
 
     private static async deleteItem(req: Request, res: Response) {
         const id = parseInt(req.params.id);
+
+        const access = await ItemService.checkOwner(id, getAuthUserId(res));
+        if (access === 'notFound') {
+            res.status(404).json({error: "Item not found"});
+            return;
+        }
+        if (access === 'forbidden') {
+            res.status(403).json({error: "Forbidden"});
+            return;
+        }
 
         const result = await ItemService.delete(id);
 

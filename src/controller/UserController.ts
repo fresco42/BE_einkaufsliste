@@ -1,7 +1,7 @@
 import {Express, Request, Response} from "express";
 import {IUser} from "../model/User";
 import {UserService} from "../service/UserService";
-import {validateAuth} from "../auth";
+import {getAuthUserId, validateAuth} from "../auth";
 
 export class UserController {
     static init(app: Express) {
@@ -68,6 +68,11 @@ export class UserController {
 
     private static async deleteUser(req: Request, res: Response) {
         const id = parseInt(req.params.id);
+
+        if (id !== getAuthUserId(res)) {
+            res.status(403).json({error: "Forbidden"});
+            return;
+        }
 
         const result = await UserService.delete(id);
 

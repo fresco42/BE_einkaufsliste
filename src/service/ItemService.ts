@@ -1,6 +1,6 @@
 import {DB} from "../db";
 import {IItem, IItemData, IUpdateItem} from "../model/Item";
-import {ResultSetHeader} from "mysql2";
+import {ResultSetHeader, RowDataPacket} from "mysql2";
 
 export class ItemService {
     static async create(item: IItem): Promise<{status: 'created', id: number} | {status: 'error'}> {
@@ -41,6 +41,24 @@ export class ItemService {
             return items[0];
         } catch {
             return undefined;
+        }
+    }
+
+    // Items gehören dem Besitzer ihrer Liste
+    static async checkOwner(id: number, userId: number): Promise<'notFound' | 'forbidden' | 'ok'> {
+        try {
+            const [rows] = await DB.query<RowDataPacket[]>(
+                "SELECT lists.user_id FROM items JOIN lists ON items.list_id = lists.id WHERE items.id = ?",
+                [id]
+            );
+
+            if (rows.length === 0) {
+                return 'notFound';
+            }
+
+            return rows[0].user_id === userId ? 'ok' : 'forbidden';
+        } catch {
+            return 'notFound';
         }
     }
 

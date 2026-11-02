@@ -23,7 +23,6 @@ export class AuthController {
             return;
         }
 
-        // Hole User-Daten für userId im Token
         const user = await UserService.getByUsername(data.username);
         if (!user) {
             res.status(500).json({error: 'User lookup failed'});

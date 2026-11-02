@@ -42,6 +42,16 @@ export class ListService {
         }
     }
 
+    static async checkOwner(id: number, userId: number): Promise<'notFound' | 'forbidden' | 'ok'> {
+        const list = await ListService.getById(id);
+
+        if (!list) {
+            return 'notFound';
+        }
+
+        return list.user_id === userId ? 'ok' : 'forbidden';
+    }
+
     static async update(id: number, data: IUpdateList): Promise<'notFound' | 'updated' | 'error'> {
         try {
             const [result] = await DB.query<ResultSetHeader>(

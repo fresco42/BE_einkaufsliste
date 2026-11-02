@@ -17,7 +17,7 @@ export interface IItemData extends RowDataPacket {
     created_at: Date;
 }
 
-// Für Update (Name, Menge, Checked-Status)
+// Für Update
 export interface IUpdateItem {
     name?: string;
     quantity?: number;

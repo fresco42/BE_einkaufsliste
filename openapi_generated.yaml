@@ -1,0 +1,809 @@
+openapi: 3.0.3
+info:
+  title: Einkaufsliste API
+  description: REST API für eine Einkaufslisten-Anwendung mit Benutzer-, Listen- und Item-Verwaltung
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: http://localhost:3000
+    description: Development Server
+
+tags:
+  - name: Auth
+    description: Authentifizierung
+  - name: Users
+    description: Benutzerverwaltung
+  - name: Lists
+    description: Einkaufslistenverwaltung
+  - name: Items
+    description: Artikelverwaltung
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Token für authentifizierte Endpunkte
+
+  schemas:
+    # Input Schemas
+    UserLogin:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: johndoe
+        password:
+          type: string
+          format: password
+          example: secret123
+
+    UserCreate:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: johndoe
+        password:
+          type: string
+          format: password
+          example: secret123
+
+    ListCreate:
+      type: object
+      required:
+        - name
+        - user_id
+      properties:
+        name:
+          type: string
+          example: Wocheneinkauf
+        user_id:
+          type: integer
+          example: 1
+
+    ListUpdate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: Neuer Listenname
+
+    ItemCreate:
+      type: object
+      required:
+        - name
+        - list_id
+      properties:
+        name:
+          type: string
+          example: Milch
+        quantity:
+          type: integer
+          default: 1
+          example: 2
+        list_id:
+          type: integer
+          example: 1
+
+    ItemUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Vollmilch
+        quantity:
+          type: integer
+          example: 3
+        checked:
+          type: boolean
+          example: true
+
+    # Response Schemas
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: johndoe
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00.000Z"
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          $ref: '#/components/schemas/UserResponse'
+
+    ListResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Wocheneinkauf
+        user_id:
+          type: integer
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00.000Z"
+
+    ListCreateResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Wocheneinkauf
+        user_id:
+          type: integer
+          example: 1
+        message:
+          type: string
+          example: List created successfully
+
+    ItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Milch
+        quantity:
+          type: integer
+          example: 2
+        checked:
+          type: boolean
+          example: false
+        list_id:
+          type: integer
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00.000Z"
+
+    ItemCreateResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Milch
+        quantity:
+          type: integer
+          example: 2
+        list_id:
+          type: integer
+          example: 1
+        checked:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Item created successfully
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Operation successful
+
+    UserCreatedResponse:
+      type: object
+      properties:
+        username:
+          type: string
+          example: johndoe
+        message:
+          type: string
+          example: User created successfully
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Error message
+
+paths:
+  # Auth Endpoints
+  /login/:
+    post:
+      tags:
+        - Auth
+      summary: Benutzer-Login
+      description: Authentifiziert einen Benutzer und gibt ein JWT-Token zurück
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+      responses:
+        '200':
+          description: Login erfolgreich
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Fehlende Felder
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Missing fields
+        '401':
+          description: Ungültige Anmeldedaten
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # User Endpoints
+  /users:
+    post:
+      tags:
+        - Users
+      summary: Neuen Benutzer erstellen
+      description: Registriert einen neuen Benutzer
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: Benutzer erfolgreich erstellt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCreatedResponse'
+        '400':
+          description: Fehlende Pflichtfelder
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Benutzername existiert bereits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Users
+      summary: Alle Benutzer abrufen
+      description: Gibt eine Liste aller Benutzer zurück (ohne Passwörter)
+      operationId: getAllUsers
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste aller Benutzer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Nicht autorisiert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Benutzer nach ID abrufen
+      description: Gibt einen einzelnen Benutzer anhand der ID zurück
+      operationId: getUserById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Benutzer-ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Benutzer gefunden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Nicht autorisiert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Benutzer nicht gefunden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Users
+      summary: Benutzer löschen
+      description: Löscht einen Benutzer anhand der ID
+      operationId: deleteUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Benutzer-ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Benutzer erfolgreich gelöscht
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Nicht autorisiert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Benutzer nicht gefunden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # List Endpoints
+  /lists:
+    post:
+      tags:
+        - Lists
+      summary: Neue Liste erstellen
+      description: Erstellt eine neue Einkaufsliste
+      operationId: createList
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListCreate'
+      responses:
+        '201':
+          description: Liste erfolgreich erstellt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListCreateResponse'
+        '400':
+          description: Fehlende Pflichtfelder
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Nicht autorisiert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /lists/user/{userId}:
+    get:
+      tags:
+        - Lists
+      summary: Listen eines Benutzers abrufen
+      description: Gibt alle Listen eines bestimmten Benutzers zurück
+      operationId: getListsByUserId
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Benutzer-ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Liste der Einkaufslisten
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ListResponse'
+
+  /lists/{id}:
+    get:
+      tags:
+        - Lists
+      summary: Liste nach ID abrufen
+      description: Gibt eine einzelne Liste anhand der ID zurück
+      operationId: getListById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Listen-ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Liste gefunden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResponse'
+        '404':
+          description: Liste nicht gefunden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Lists
+      summary: Liste aktualisieren
+      description: Aktualisiert den Namen einer Liste
+      operationId: updateList
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Listen-ID
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListUpdate'
+      responses:
+        '200':
+          description: Liste erfolgreich aktualisiert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          description: Fehlende Pflichtfelder
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Nicht autorisiert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Liste nicht gefunden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Lists
+      summary: Liste löschen
+      description: Löscht eine Liste anhand der ID
+      operationId: deleteList
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Listen-ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Liste erfolgreich gelöscht
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Nicht autorisiert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Liste nicht gefunden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Item Endpoints
+  /items:
+    post:
+      tags:
+        - Items
+      summary: Neues Item erstellen
+      description: Erstellt einen neuen Artikel in einer Einkaufsliste
+      operationId: createItem
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemCreate'
+      responses:
+        '201':
+          description: Item erfolgreich erstellt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemCreateResponse'
+        '400':
+          description: Fehlende Pflichtfelder
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Nicht autorisiert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /items/list/{listId}:
+    get:
+      tags:
+        - Items
+      summary: Items einer Liste abrufen
+      description: Gibt alle Items einer bestimmten Einkaufsliste zurück
+      operationId: getItemsByListId
+      parameters:
+        - name: listId
+          in: path
+          required: true
+          description: Listen-ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Liste der Items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ItemResponse'
+
+  /items/{id}:
+    get:
+      tags:
+        - Items
+      summary: Item nach ID abrufen
+      description: Gibt ein einzelnes Item anhand der ID zurück
+      operationId: getItemById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Item-ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Item gefunden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemResponse'
+        '404':
+          description: Item nicht gefunden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Items
+      summary: Item aktualisieren
+      description: Aktualisiert ein Item (Name, Menge und/oder Checked-Status)
+      operationId: updateItem
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Item-ID
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemUpdate'
+      responses:
+        '200':
+          description: Item erfolgreich aktualisiert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          description: Keine Felder zum Aktualisieren
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Nicht autorisiert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Item nicht gefunden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Items
+      summary: Item löschen
+      description: Löscht ein Item anhand der ID
+      operationId: deleteItem
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Item-ID
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Item erfolgreich gelöscht
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Nicht autorisiert
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Item nicht gefunden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Serverfehler
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

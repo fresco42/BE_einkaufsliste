@@ -25,13 +25,3 @@ CREATE TABLE IF NOT EXISTS items (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (list_id) REFERENCES lists(id) ON DELETE CASCADE
 );
-
--- Indizes für bessere Performance
-CREATE INDEX idx_lists_user_id ON lists(user_id);
-CREATE INDEX idx_items_list_id ON items(list_id);
-
--- Optionale Test-Daten
--- INSERT INTO users (username, password) VALUES ('testuser', 'password123');
--- INSERT INTO lists (name, user_id) VALUES ('Meine Einkaufsliste', 1);
--- INSERT INTO items (name, quantity, list_id) VALUES ('Milch', 2, 1);
--- INSERT INTO items (name, quantity, list_id) VALUES ('Brot', 1, 1);

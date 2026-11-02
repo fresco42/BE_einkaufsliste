@@ -14,7 +14,7 @@ export interface IListData extends RowDataPacket {
     created_at: Date;
 }
 
-// Für Update (nur Name änderbar)
+// Für Update
 export interface IUpdateList {
     name: string;
 }

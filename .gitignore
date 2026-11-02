@@ -1,6 +1,19 @@
 node_modules/
 dist/
+
+# Secrets
 .env
+.env.*
+!.env.example
+
+# IDE / Tools
 .idea/
+.vscode/
+.claude/
 CLAUDE.md
-README.md
+
+# OS / Logs
+.DS_Store
+Thumbs.db
+nul
+*.log
