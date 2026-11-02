@@ -16,3 +16,4 @@ services:
 
 volumes:
   einkaufsliste-db:
+    name: einkaufsliste-db
