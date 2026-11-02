@@ -1,0 +1,18 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: einkaufsliste-mysql
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - einkaufsliste-db:/var/lib/mysql
+      - ./database.sql:/docker-entrypoint-initdb.d/database.sql:ro
+
+volumes:
+  einkaufsliste-db:
